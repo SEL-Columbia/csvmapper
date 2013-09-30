@@ -1,0 +1,40 @@
+<html>
+<head>
+	<title>CSV mapper</title>
+	<link href="resources/css/bootstrap.min.css" rel="stylesheet" media="screen"/>
+	<link rel="stylesheet" href="resources/leaflet-0.6.4/leaflet.css" />
+ </head>
+ <body>
+ 	<!-- the map -->
+ 	<div id="map" style="height: 300px;"></div>
+
+ 	<!--the csv -->
+ 	<input type="file" name="filename" id="filename"/>
+ 	<!--the template<script type="text/template" id="csv_template">
+	    <table>
+	    <% _.each(tweets, function (tweet, index) { %>
+	      <tr data-toggle="collapse" data-target=<%= "#text" + index %> >
+	        <td class="btn btn-info"><b><%= tweet.user.name %></b></td> 
+	        <td><%= tweet.created_at.substr(0, 16) %></td>
+	      </tr>
+	      <tr style="padding: 10px;">
+	        <td colspan="2" style="background-color: #fff;">
+	          <div id=<%= "text" + index %> class="collapse" >
+	            <%= tweet.text %>
+	          </div>
+	        </td>
+	      </tr>
+	    <% }); %>
+	    </table>
+    </script> -->
+    <div id="csvimporthint"></div>
+
+    <!--the scripts -->
+    <script src="resources/js/jquery-1.10.2.js"></script>
+    <script src="resources/js/underscore.js"></script>
+    <script src="resources/js/bootstrap.js"></script>
+    <script src="resources/leaflet-0.6.4/leaflet.js"></script>
+    <script src="resources/js/leaflet.geocsv.js"></script>
+ 	<script src="resources/js/csvmapper.js"></script>
+ </body>
+</html>
