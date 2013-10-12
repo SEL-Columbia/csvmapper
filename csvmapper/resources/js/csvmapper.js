@@ -1,6 +1,6 @@
-
 var map;
 var ajaxRequest;
+var readCSV;
 
 // upload the csv
 $("#filename").change(function(e) {
@@ -16,12 +16,14 @@ $("#filename").change(function(e) {
 		var reader = new FileReader();
 		reader.onload = function(e) {
 			var csvLines = e.target.result.split(/[\r\n|\n]+/);
+			var headerLine = "";
 
 			var table = $('<table></table>').addClass('csv-table table table-hover table-bordered');
 			_.each(csvLines, function(line, index){
 				var row = $('<tr></tr>').addClass('bar');
 
 				if(index == 0){
+					headerLine = line;
 					_.each(line.split(","), function(col){
 						row.append($('<th class=\"header-row btn-primary\">' + col + '</th>'));
 					});
@@ -36,7 +38,10 @@ $("#filename").change(function(e) {
 			$("#csvimporthint").append(table);
 			$("#csvimporthinttitle").show();
 
-			geoCSV(e.target.result);
+			// save to global object
+			readCSV = e.target.result;
+			getLatLngField(headerLine);
+			//geoCSV(e.target.result);
 
 		};
 		reader.readAsText(e.target.files.item(0));
@@ -130,13 +135,69 @@ function initmap() {
 	//map.on('moveend', onMapMove)
 }
 
+// gets the user to choose the lat lng field from the csv
+function getLatLngField(line){
+	var fieldModalBody  = $("#fieldModal .modal-body")
+	var innerHTML = _.template($("#latlng_selection_template").html(), {fields : line.split(',')});
+	fieldModalBody.append(innerHTML);
+
+	// trigger the modal
+	$('#fieldModal').modal('show');
+
+	// bind the click of fields
+	$(".modalLatLngField").on("click", function(e){
+		// toggle the classes based on selection
+		$(".modalLatLngField").removeClass("btn-primary");
+		$(this).addClass("btn-primary");
+	});
+
+	// bind the save click
+	$("#saveLatLng").on("click", function(e){
+		//get the selected element
+		var chosenLatLngField = $(".modalLatLngField.btn-primary").text()
+		var fieldIndex = $(".modalLatLngField.btn-primary").attr("field-Index")
+		if( chosenLatLngField != ""){
+			// modify the global csv
+			readCSV = readCSV.replace(line, line.replace(chosenLatLngField, "lat,lng"));
+			$('#fieldModal').modal('hide');	
+			geoCSV(readCSV, fieldIndex);
+		}else{
+			$('#fieldModal').modal('show');	
+		}
+	});
+}
+
 //map the csv onto the map
-function geoCSV(csv){
+function geoCSV(csv, geoFieldIndex){
 	initmap();
 
+	//split by line and then replace geo location with 2 cols lat lng
+	var csvLines = csv.split(/[\r\n|\n]+/);
+	var refinedCsv = "";
+	_.each(csvLines, function(line, index){
+		if(index == 0){
+			//getLatLngField(line);
+			//line = line.replace("Geolocation", "lat,lng");
+			/*_.each(line.split(','), function(field, field_index){
+				if(field == "Geolocation" ){
+					//
+					console.log(field_index);
+				}
+			});*/
+		}else{
+			fields = line.split(',');
+			line = line.replace(fields[geoFieldIndex], fields[geoFieldIndex].split(' '))
+		}
+		refinedCsv += line + "\n";
+	});
+
+	// create a geo layer from the csv
 	var mi_geocsv = L.geoCsv (null, {firstLineTitles: true, fieldSeparator: ','});
-	mi_geocsv.addData(csv);
+	mi_geocsv.addData(refinedCsv);
+	
     map.addLayer(mi_geocsv);
+    //point map to the correct location
+    map.fitBounds(mi_geocsv.getBounds());
 }
 
 

@@ -10,6 +10,38 @@
 
  	<!--the csv -->
  	<input type="file" name="filename" id="filename"/>
+ 
+ 	<!--the template  -->
+ 	<script type="text/template" id="latlng_selection_template">
+	    <% _.each(fields, function (field, index) { %>
+	      <button type="button" class="btn btn-default modalLatLngField" field-Index=<%=index%> ><%= field%></button>
+	    <% }); %>
+    </script>
+
+ 	<!-- Button trigger modal -->
+	<a data-toggle="modal" href="#fieldModal" class="btn btn-primary btn-lg">Refine CSV</a>
+
+	  <!-- Modal -->
+	<div class="modal fade" id="fieldModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+	    <div class="modal-dialog">
+	      <div class="modal-content">
+
+		        <div class="modal-header">
+		          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+		          <h4 class="modal-title">Latitude and Longitude</h4>
+		        </div>
+		        <div class="modal-body">
+		          
+		        </div>
+		        <div class="modal-footer">
+		          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+		          <button id="saveLatLng" type="button" class="btn btn-primary">Save changes</button>
+		        </div>
+
+	      </div><!-- /.modal-content -->
+	    </div><!-- /.modal-dialog -->
+	</div><!-- /.modal -->
+
  	<!--the template<script type="text/template" id="csv_template">
 	    <table>
 	    <% _.each(tweets, function (tweet, index) { %>
@@ -28,6 +60,8 @@
 	    </table>
     </script> -->
     <div id="csvimporthint"></div>
+
+     
 
     <!--the scripts -->
     <script src="resources/js/jquery-1.10.2.js"></script>
