@@ -1,0 +1,7 @@
+how to pick lat and lng from csv, make user pick 2 cols(lat lng)
+
+lat long when in same col can be in any order
+
+start classifying data…. enums or range and so on
+
+refining csv after initial has no effect, remove layer ?

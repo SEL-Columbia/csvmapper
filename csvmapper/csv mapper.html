@@ -3,6 +3,14 @@
 	<title>CSV mapper</title>
 	<link href="resources/css/bootstrap.min.css" rel="stylesheet" media="screen"/>
 	<link rel="stylesheet" href="resources/leaflet-0.6.4/leaflet.css" />
+	<style type="text/css">
+		body #fieldModal {
+		    /* new custom width */
+		    width: 50%;
+		    /* must be half of the width, minus scrollbar on the left (30px) */
+		    margin-left: -25%;
+		}
+	</style>
  </head>
  <body>
  	<!-- the map -->
@@ -13,9 +21,28 @@
  
  	<!--the template  -->
  	<script type="text/template" id="latlng_selection_template">
+	    <div id="latlngSeparatorDiv" class="input-append">
+	    	<label class="control-label">Enter the separator</label>
+	    	<input type="text" placeholder="Comma if your csv has Lat,Lng" id="latlngSeparatorId" class="span4"></input>
+	    	<span class="add-on">,</span>
+	    	<span class="add-on">[SPACE]</span>
+	    	<span class="add-on">@</span>
+	    	<hr>
+	    </div>
+
+	    <div id="currentLatLngDiv" style="display:none">
+	    	<h5>Toggle Latitude, Longitude first, then pick the column</h5>
+	    	<div class="btn-group" data-toggle="buttons-radio">
+			  <button type="button" class="btn btn-info" value="Lat">Latitude</button>
+			  <button type="button" class="btn btn-info" value="Long">Longitude</button>
+			</div>
+	    </div>
+
+	    <h5>Pick the column(s)</h5>
 	    <% _.each(fields, function (field, index) { %>
 	      <button type="button" class="btn btn-default modalLatLngField" field-Index=<%=index%> ><%= field%></button>
 	    <% }); %>
+	    
     </script>
 
  	<!-- Button trigger modal -->
@@ -32,6 +59,17 @@
 		        </div>
 		        <div class="modal-body">
 		          
+		          	<!-- Radio buttons - single or multi col lat lng -->
+		          	<label class="control-label">Pick the geo-locations column</label>
+		        	<label class="radio">
+					  <input type="radio" name="latlngRadios" id="latlngRadio1" value="single" checked>
+					  Your csv has Latitude and Longitude in a single column, pick it and enter the separator as well
+					</label>
+					<label class="radio">
+					  <input type="radio" name="latlngRadios" id="latlngRadio2" value="multiple">
+					  Your csv has Latitude and Longitude in different columns, pick them
+					</label>
+					<hr>
 		        </div>
 		        <div class="modal-footer">
 		          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
