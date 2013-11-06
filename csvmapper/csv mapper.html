@@ -14,12 +14,27 @@
  </head>
  <body>
  	<!-- the map -->
- 	<div id="map" style="height: 300px;"></div>
+ 	<div>
+	 	<div id="map" style="height: 300px;"></div>
 
- 	<!--the csv -->
- 	<input type="file" name="filename" id="filename"/>
+	 	<!--the csv -->
+	 	<input type="file" name="filename" id="filename"/>
+
+	 	<!-- Button trigger modal -->
+		<a data-toggle="modal" href="#fieldModal" class="btn btn-primary btn-lg">Refine CSV</a>
+
+	 	<!--the csv table -->
+
+	 	<table><tr>
+	 		<td>
+	 			<div id="csvimporthint" style="width: 1000px; overflow: scroll;"></div>
+	 		</td><td style="vertical-align: top;">
+	 			<div id="columnPickerId"></div>
+	 		</td>
+	 	</tr></table>
+ 	</div>
  
- 	<!--the template  -->
+ 	<!--the modal body template  -->
  	<script type="text/template" id="latlng_selection_template">
 	    <div id="latlngSeparatorDiv" class="input-append">
 	    	<label class="control-label">Enter the separator</label>
@@ -30,25 +45,63 @@
 	    	<hr>
 	    </div>
 
-	    <div id="currentLatLngDiv" style="display:none">
-	    	<h5>Toggle Latitude, Longitude first, then pick the column</h5>
-	    	<div class="btn-group" data-toggle="buttons-radio">
-			  <button type="button" class="btn btn-info" value="Lat">Latitude</button>
-			  <button type="button" class="btn btn-info" value="Long">Longitude</button>
-			</div>
-	    </div>
-
 	    <h5>Pick the column(s)</h5>
-	    <% _.each(fields, function (field, index) { %>
-	      <button type="button" class="btn btn-default modalLatLngField" field-Index=<%=index%> ><%= field%></button>
-	    <% }); %>
 	    
+			<div id="latitudeDropdownDiv">
+			<table><tr><td>
+				<label id="defaultDropdownLabel">Select the Geo-location column</label>
+			</td><td>
+				<select id="latDropdown">
+					<% _.each(fields, function (field, index) { %>
+						<option value=<%=index%> ><%= field%></option>
+					<% }); %>
+				</select>
+			</td></tr></table>
+			</div>
+		
+			<div id="longitudeDropdownDiv" style="display:none">
+			<table><tr><td>
+				<label id="defaultDropdownLabel">Select Longitude</label>
+			</td><td>
+				<select id="longDropdown">
+					<% _.each(fields, function (field, index) { %>
+						<option value=<%=index%> ><%= field%></option>
+					<% }); %>
+				</select>
+			</td></tr></table>
+			</div>
+
     </script>
 
- 	<!-- Button trigger modal -->
-	<a data-toggle="modal" href="#fieldModal" class="btn btn-primary btn-lg">Refine CSV</a>
+    <!--the incomplete selection alert template  -->
+    <script type="text/template" id="incompleteSelection_templateId">
+    	<div class="alert">
+		  <button type="button" class="close" data-dismiss="alert">&times;</button>
+		  <strong>Error!</strong> Please make the required selections.
+		</div>
+    </script>
 
-	  <!-- Modal -->
+    <!--the incomplete selection alert template  -->
+    <script type="text/template" id="columnPicker_templateId">
+    	<h5>Pick the column(s), max 6 at a time</h5>
+
+    	<% var index = 0; while( columnCount > 0 ) { %>
+	    	<div>
+				<table><tr><td>
+					<label>Select Column <%= index%></label>
+				</td><td>
+					<select class="colSelectDropdown" index=<%= index%>>
+						<% _.each(fields, function (field, field_index) { %>
+							<option value=<%=field_index%> ><%= field%></option>
+						<% }); %>
+					</select>
+				</td></tr></table>
+			</div>
+		<% index++; columnCount--; } %>
+
+    </script>
+
+	<!-- Modal -->
 	<div class="modal fade" id="fieldModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
 	    <div class="modal-dialog">
 	      <div class="modal-content">
@@ -70,8 +123,10 @@
 					  Your csv has Latitude and Longitude in different columns, pick them
 					</label>
 					<hr>
+					<div id="dynamicModalBodyId"></div>
 		        </div>
 		        <div class="modal-footer">
+		        	<div id="modalFooterAlertId"></div>
 		          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 		          <button id="saveLatLng" type="button" class="btn btn-primary">Save changes</button>
 		        </div>
@@ -80,26 +135,6 @@
 	    </div><!-- /.modal-dialog -->
 	</div><!-- /.modal -->
 
- 	<!--the template<script type="text/template" id="csv_template">
-	    <table>
-	    <% _.each(tweets, function (tweet, index) { %>
-	      <tr data-toggle="collapse" data-target=<%= "#text" + index %> >
-	        <td class="btn btn-info"><b><%= tweet.user.name %></b></td> 
-	        <td><%= tweet.created_at.substr(0, 16) %></td>
-	      </tr>
-	      <tr style="padding: 10px;">
-	        <td colspan="2" style="background-color: #fff;">
-	          <div id=<%= "text" + index %> class="collapse" >
-	            <%= tweet.text %>
-	          </div>
-	        </td>
-	      </tr>
-	    <% }); %>
-	    </table>
-    </script> -->
-    <div id="csvimporthint"></div>
-
-     
 
     <!--the scripts -->
     <script src="resources/js/jquery-1.10.2.js"></script>

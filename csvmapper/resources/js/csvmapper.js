@@ -20,22 +20,26 @@ $("#filename").change(function(e) {
 
 			var table = $('<table></table>').addClass('csv-table table table-hover table-bordered');
 			_.each(csvLines, function(line, index){
-				var row = $('<tr></tr>').addClass('bar');
+				var row = $('<tr></tr>');
 
 				if(index == 0){
 					headerLine = line;
-					_.each(line.split(","), function(col){
-						row.append($('<th class=\"header-row btn-primary\">' + col + '</th>'));
+					_.each(line.split(","), function(col, index){
+						var colClass = 'header-row btn-primary column column' + index;
+						row.append($('<th class=\"' + colClass + '\">' + col + '</th>'));
 					});
 				}else{
-					_.each(line.split(","), function(col){
-						row.append($('<td>' + col + '</td>'));
+					_.each(line.split(","), function(col, index){
+						var colClass = 'column column' + index;
+						row.append($('<td class=\"' + colClass +'\">' + col + '</td>'));
 					});
 				}
 				table.append(row);	
 			});
 
 			$("#csvimporthint").append(table);
+			// hide all the columns initially
+			$(".column").hide();
 			$("#csvimporthinttitle").show();
 
 			// save to global object
@@ -48,20 +52,6 @@ $("#filename").change(function(e) {
 	}
 	return false;
 });
-
-/*function renderView(reply){
-	$("#csvimporthinttitle").empty();
-	var TwitterWidget = Backbone.View.extend({
-	    el: '#csvimporthinttitle',
-	    initialize: function () {
-	      this.render();
-	    },
-	    render: function () {
-    		$(this.el).append(_.template($("#csv_template").html(), {rows : reply.statuses}));
-	    }
-  	});
-  	new TwitterWidget();
-}*/
 
 // code to make header freeze
 function UpdateTableHeaders() {
@@ -135,9 +125,80 @@ function initmap() {
 	//map.on('moveend', onMapMove)
 }
 
+// modal radio button change
+function latlngRadioChanged(){
+	// hide the input field
+	if(this.value == 'single'){
+		// show the separator div
+		$("#latlngSeparatorDiv").show();
+		// change the labels and hide the longitude selection
+		$("#defaultDropdownLabel").text("Select the Geo-location column");
+		$("#longitudeDropdownDiv").hide();
+	}else{
+		// hide the separator div
+		$("#latlngSeparatorDiv").hide();
+		// change the labels and show the longitude selection
+		$("#defaultDropdownLabel").text("Select Latitude");
+		$("#longitudeDropdownDiv").show();
+	}
+}
+
+// function that handles the modal save click
+function modalSaveClick(e){
+	// get the line for the event data
+	line = e.data.line;
+	// single or multiple selection for lat and long
+	if($("input[name='latlngRadios']:checked").val() == 'single'){
+		//get the selected element
+		var chosenLatLngField = $("#latDropdown option:selected").text();
+		var fieldIndex = $("#latDropdown option:selected").val();
+		var separator = $('#latlngSeparatorId').val();
+
+		if( chosenLatLngField != "" && separator != ""){
+			// modify the global csv
+			readCSV = readCSV.replace(line, line.replace(chosenLatLngField, "lat,lng"));
+
+			// hide the modal, show the column picker and map
+			$('#fieldModal').modal('hide');
+			columnPicker(line);
+			geoCSV(readCSV, fieldIndex, separator);
+		}else{
+			// show the modal, selection not complete
+			$('#fieldModal').modal('show');
+			var alertHTML = _.template($("#incompleteSelection_templateId").html());
+			$("#modalFooterAlertId").prepend(alertHTML);
+		}
+	}else{
+		// separate cols for lat and lng
+		var chosenLatField = $("#latDropdown option:selected").text();
+		var chosenLongField = $("#longDropdown option:selected").text();
+
+		if( chosenLatField != "" && chosenLongField != "" ){
+			// need to replace cols so that geo csv can understand them
+			var newHeader = line.replace(chosenLatField, "lat");
+			newHeader = newHeader.replace(chosenLongField, "lng");
+
+			// replace header line in csv
+			readCSV = readCSV.replace(line, newHeader);
+
+			// hide the modal, show the column picker and 
+			$('#fieldModal').modal('hide');
+			columnPicker(line);
+			geoCSV(readCSV);
+		}else{
+			// show the modal, selection not complete
+			$('#fieldModal').modal('show');
+			var alertHTML = _.template($("#incompleteSelection_templateId").html());
+			$("#modalFooterAlertId").prepend(alertHTML);
+		}
+	}
+}
+
 // gets the user to choose the lat lng field from the csv
 function getLatLngField(line){
-	var fieldModalBody  = $("#fieldModal .modal-body")
+	// get the modal body and empty it
+	var fieldModalBody  = $("#dynamicModalBodyId");
+	fieldModalBody.empty();
 	var latlng_innerHTML = 
 		_.template($("#latlng_selection_template").html(), 
 			{fields : line.split(',')});
@@ -146,79 +207,54 @@ function getLatLngField(line){
 	// trigger the modal
 	$('#fieldModal').modal('show');
 
-	// radio button change
-	$("input[name='latlngRadios']").change(function() {
-		// hide the input field
-		if(this.value == 'single'){
-			$("#latlngSeparatorDiv").show();
-			$("#currentLatLngDiv").hide();
-		}else{
-			$("#latlngSeparatorDiv").hide();
-			$("#currentLatLngDiv").show();
-		}
-		// clear the column selections
-		$(".modalLatLngField").removeClass("btn-primary");
-		$(".modalLatLngField").removeClass("btn-danger");
-	});
-
-	// bind the click of fields
-	$(".modalLatLngField").on("click", function(e){
-		if($("input[name='latlngRadios']:checked").val() == 'single'){
-			// only 1 column to select
-			// toggle the classes based on selection
-			$(".modalLatLngField").removeClass("btn-primary");
-			$(this).addClass("btn-primary");
-		}else{
-			// 2 columns to select
-			// Lat picked
-			if( $("#currentLatLngDiv .active").attr("value") == "Lat" ){
-				$(".modalLatLngField").removeClass("btn-primary");
-				$(this).addClass("btn-primary");
-			}else{
-				//long picked
-				$(".modalLatLngField").removeClass("btn-danger");
-				$(this).addClass("btn-danger");
-			}
-		}
-	});	
+	// capture the modal radio button change event
+	$("input[name='latlngRadios']").change(latlngRadioChanged);
 
 	// bind the save click
-	$("#saveLatLng").on("click", function(e){
-		// single or multiple selection for lat and long
-		if($("input[name='latlngRadios']:checked").val() == 'single'){
-			//get the selected element
-			var chosenLatLngField = $(".modalLatLngField.btn-primary").text()
-			var fieldIndex = $(".modalLatLngField.btn-primary").attr("field-Index")
-			if( chosenLatLngField != ""){
-				// modify the global csv
-				readCSV = readCSV.replace(line, line.replace(chosenLatLngField, "lat,lng"));
-				$('#fieldModal').modal('hide');
-				var separator = $('#latlngSeparatorId').val();
-				geoCSV(readCSV, fieldIndex, separator);
-			}else{
-				$('#fieldModal').modal('show');
-			}
-		}else{
-			// separate cols for lat and lng
-			var chosenLatField = $(".modalLatLngField.btn-primary").text();
-			var chosenLongField = $(".modalLatLngField.btn-danger").text();
+	$("#saveLatLng").on("click", {line: line}, modalSaveClick);
+}
 
-			if( chosenLatField != "" && chosenLongField != "" ){
-				// need to replace cols so that geo csv can understand them
-				var newHeader = line.replace(chosenLatField, "lat");
-				newHeader = newHeader.replace(chosenLongField, "lng");
+// function that handles the change of col selection
+function colSelectionChanged(e){
+	// column from the csv
+	var chosenColumn = $(this).val();
+	var newColClass = "th.column"+ chosenColumn + ", td.column" + chosenColumn;
 
-				// replace header line in csv
-				readCSV = readCSV.replace(line, newHeader);
+	// which place to put this column into
+	var columnChosenFor = $(this).attr("index");
+	var earlierColClass = "th:visible:eq(" + columnChosenFor + "),td:visible:eq(" + columnChosenFor + ")";
 
-				// hide the modal and show the map
-				$('#fieldModal').modal('hide');
-				geoCSV(readCSV);
-			}else{
-				$('#fieldModal').modal('show');
-			}
+	$('.csv-table tr').each(function() {
+	    var tr = $(this);
+	    var td1 = tr.find(newColClass);
+	    var td2 = tr.find(earlierColClass);
+	    if (td2.length != 0){
+		    td2.hide();
+		    td1.detach().insertAfter(td2);
+		    //td1.detach().insertBefore(td2);
 		}
 	});
+	$(newColClass).show();
+}
+
+// function that allows the user to pick max 6 cols to display
+function columnPicker(line){
+	var columnCount = 6;
+	var columns = line.split(',');
+	// count of the no of cols
+	if( columns.length < 6 )
+		columnCount = columns.length();
+
+	// get the HTML from the template
+	var columnPickerHTML = _.template($("#columnPicker_templateId").html(), 
+			{fields : columns, columnCount: columnCount});
+	
+	// add the HTML to the columnPicker
+	$("#columnPickerId").empty();
+	$("#columnPickerId").append(columnPickerHTML);
+
+	// bind the changed of dropdowns
+	$(".colSelectDropdown").change(colSelectionChanged);
 }
 
 //map the csv onto the map

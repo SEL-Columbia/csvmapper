@@ -5,3 +5,7 @@ lat long when in same col can be in any order
 start classifying data…. enums or range and so on
 
 refining csv after initial has no effect, remove layer ?
+
+handle error when user picks a col that doesn't have geo location info
+
+show refine csv only once we have csv
