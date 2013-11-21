@@ -81,14 +81,14 @@
 		</div>
     </script>
 
-    <!--the incomplete selection alert template  -->
+    <!--the column selection template  -->
     <script type="text/template" id="columnPicker_templateId">
-    	<h5>Pick the column(s), max 6 at a time</h5>
+    	<h5>Pick the column(s) to show on the left, max 6 at a time</h5>
 
     	<% var index = 0; while( columnCount > 0 ) { %>
 	    	<div>
 				<table><tr><td>
-					<label>Select Column <%= index%></label>
+					<label>Select Column <%= index+1%></label>
 				</td><td>
 					<select class="colSelectDropdown" index=<%= index%>>
 						<% _.each(fields, function (field, field_index) { %>
@@ -98,7 +98,8 @@
 				</td></tr></table>
 			</div>
 		<% index++; columnCount--; } %>
-
+		<!-- Button trigger modal -->
+		<a id="resetColumnSelectionId" class="btn btn-primary btn-lg">Reset</a>
     </script>
 
 	<!-- Modal -->

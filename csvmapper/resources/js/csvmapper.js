@@ -1,6 +1,8 @@
-var map;
+var _map;
 var ajaxRequest;
 var readCSV;
+var _refinedCsv;
+var _mi_layer_geocsv;
 
 // upload the csv
 $("#filename").change(function(e) {
@@ -109,7 +111,7 @@ function initmap() {
 	}
 
 	// set up the map
-	map = new L.Map('map');
+	_map = new L.Map('map');
 
 	// create the tile layer with correct attribution
 	var osmUrl='http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -117,8 +119,8 @@ function initmap() {
 	var osm = new L.TileLayer(osmUrl, {minZoom: 1, maxZoom: 12, attribution: osmAttrib});		
 
 	// start the map in South-East England
-	map.setView(new L.LatLng(51.3, 0.7),5);
-	map.addLayer(osm);
+	_map.setView(new L.LatLng(51.3, 0.7),5);
+	_map.addLayer(osm);
 
 	//get the markers for the map
 	//askForPlots();
@@ -156,12 +158,12 @@ function modalSaveClick(e){
 
 		if( chosenLatLngField != "" && separator != ""){
 			// modify the global csv
-			readCSV = readCSV.replace(line, line.replace(chosenLatLngField, "lat,lng"));
+			var tempCSV = readCSV.replace(line, line.replace(chosenLatLngField, "lat,lng"));
 
 			// hide the modal, show the column picker and map
 			$('#fieldModal').modal('hide');
 			columnPicker(line);
-			geoCSV(readCSV, fieldIndex, separator);
+			geoCSV(tempCSV, fieldIndex, separator);
 		}else{
 			// show the modal, selection not complete
 			$('#fieldModal').modal('show');
@@ -179,12 +181,12 @@ function modalSaveClick(e){
 			newHeader = newHeader.replace(chosenLongField, "lng");
 
 			// replace header line in csv
-			readCSV = readCSV.replace(line, newHeader);
+			var tempCSV = readCSV.replace(line, newHeader);
 
 			// hide the modal, show the column picker and 
 			$('#fieldModal').modal('hide');
 			columnPicker(line);
-			geoCSV(readCSV);
+			geoCSV(tempCSV);
 		}else{
 			// show the modal, selection not complete
 			$('#fieldModal').modal('show');
@@ -237,6 +239,38 @@ function colSelectionChanged(e){
 	$(newColClass).show();
 }
 
+// redraw layer based on column clicked
+function redrawLayer(columnClicked){
+	var geojsonMarkerOptions = {
+	    radius: 8,
+	    fillColor: "#ff78ff",
+	    color: "#fff",
+	    weight: 1,
+	    opacity: 1,
+	    fillOpacity: 0.8
+	};
+
+	var pointToLayerFunction = function (feature, latlng) {
+											return L.circleMarker(latlng, geojsonMarkerOptions);
+										};
+	// Remove the previous layer from the map
+    _map.removeLayer(_mi_layer_geocsv);
+	drawMapFromCsv(pointToLayerFunction);
+}
+
+// function that handles clearing the column
+function colSelectionReset(e){
+	$(".column").hide();
+}
+
+// function that gets called when column on the csv is clicked
+function columnClicked(e){
+	var columnClass = $(this).attr("class");
+	// matches column followed by a digit
+	var columnClicked = columnClass.match(/column\d/);
+	redrawLayer(columnClicked);
+}
+
 // function that allows the user to pick max 6 cols to display
 function columnPicker(line){
 	var columnCount = 6;
@@ -255,19 +289,51 @@ function columnPicker(line){
 
 	// bind the changed of dropdowns
 	$(".colSelectDropdown").change(colSelectionChanged);
+	// bind reset of column selection
+	$("#resetColumnSelectionId").click(colSelectionReset);
+	// bind the column click
+	$(".column").click(columnClicked);
+}
+
+// draw the map, expect this function to be called repeatedly to draw
+function drawMapFromCsv(pointToLayerFunction){
+	if(!pointToLayerFunction){
+		var geojsonMarkerOptions = {
+		    radius: 8,
+		    fillColor: "#ff7800",
+		    color: "#fff",
+		    weight: 1,
+		    opacity: 1,
+		    fillOpacity: 0.8
+		};
+		pointToLayerFunction = function (feature, latlng) {
+											return L.circleMarker(latlng, geojsonMarkerOptions);
+										}
+	}
+
+	// create a geo layer from the csv
+	_mi_layer_geocsv = L.geoCsv (null, {
+										pointToLayer: pointToLayerFunction,
+									 	firstLineTitles: true, 
+									 	fieldSeparator: ','
+								 	});
+	_mi_layer_geocsv.addData(_refinedCsv);
+	
+    _map.addLayer(_mi_layer_geocsv);
+    //point map to the correct location
+    _map.fitBounds(_mi_layer_geocsv.getBounds());
 }
 
 //map the csv onto the map
 function geoCSV(csv, geoFieldIndex, separator){
-	if(!map){
+	if(!_map){
 		initmap();
 	}
-
-	//split by line
-	var csvLines = csv.split(/[\r\n|\n]+/);
 	var refinedCsv = "";
+	var csvLines = csv.split(/[\r\n|\n]+/);
 
 	// in case of single col need to make separate cols for lat and long
+	// geoFieldindex tells us its position
 	if(geoFieldIndex){
 		_.each(csvLines, function(line, index){
 			if(index == 0){
@@ -291,13 +357,11 @@ function geoCSV(csv, geoFieldIndex, separator){
 		});
 	}
 
-	// create a geo layer from the csv
-	var mi_geocsv = L.geoCsv (null, {firstLineTitles: true, fieldSeparator: ','});
-	mi_geocsv.addData(refinedCsv);
-	
-    map.addLayer(mi_geocsv);
-    //point map to the correct location
-    map.fitBounds(mi_geocsv.getBounds());
+	// we save the refined csv to draw again based on user selection
+	_refinedCsv = refinedCsv;
+
+	// draw map from csv
+	drawMapFromCsv();
 }
 
 
