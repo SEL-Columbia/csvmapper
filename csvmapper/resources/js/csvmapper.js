@@ -240,7 +240,10 @@ function colSelectionChanged(e){
 }
 
 // redraw layer based on column clicked
-function redrawLayer(columnClicked){
+function redrawLayer(columnClick){
+	var regexp = new RegExp('\\d');
+	var columnVal = columnClick[0].match(regexp)[0];
+
 	var geojsonMarkerOptions = {
 	    radius: 8,
 	    fillColor: "#ff78ff",
@@ -251,8 +254,25 @@ function redrawLayer(columnClicked){
 	};
 
 	var pointToLayerFunction = function (feature, latlng) {
-											return L.circleMarker(latlng, geojsonMarkerOptions);
-										};
+											var localGeojsonMarkerOptions = {};
+											localGeojsonMarkerOptions = $.extend(localGeojsonMarkerOptions, geojsonMarkerOptions);
+											var index = 0;
+											for(var prop in feature.properties){
+												if(index == columnVal){
+													if(feature.properties[prop] == "PRIVATE")
+														localGeojsonMarkerOptions.fillColor = "#ff7800";
+													break;
+												}
+												index++;
+											}
+												
+											var marker =  L.circleMarker(latlng, localGeojsonMarkerOptions);
+											var popup = marker.bindPopup("<b>" + feature.properties["prop-3"] + "</b>");
+											marker.on('click', function(e){
+												popup.openPopup();
+											});
+											return marker;
+										}
 	// Remove the previous layer from the map
     _map.removeLayer(_mi_layer_geocsv);
 	drawMapFromCsv(pointToLayerFunction);
@@ -267,8 +287,8 @@ function colSelectionReset(e){
 function columnClicked(e){
 	var columnClass = $(this).attr("class");
 	// matches column followed by a digit
-	var columnClicked = columnClass.match(/column\d/);
-	redrawLayer(columnClicked);
+	var columnClick = columnClass.match(/column\d/);
+	redrawLayer(columnClick);
 }
 
 // function that allows the user to pick max 6 cols to display
@@ -307,8 +327,13 @@ function drawMapFromCsv(pointToLayerFunction){
 		    fillOpacity: 0.8
 		};
 		pointToLayerFunction = function (feature, latlng) {
-											return L.circleMarker(latlng, geojsonMarkerOptions);
-										}
+			var marker =  L.circleMarker(latlng, geojsonMarkerOptions);
+			var popup = marker.bindPopup("<b>Hello world!</b><br>I am a popup.");
+			marker.on('click', function(e){
+				popup.openPopup();
+			});
+			return marker;
+		}
 	}
 
 	// create a geo layer from the csv
