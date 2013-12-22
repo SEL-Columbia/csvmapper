@@ -3,6 +3,14 @@ var ajaxRequest;
 var readCSV;
 var _refinedCsv;
 var _mi_layer_geocsv;
+// datavore table
+var _csvDataTable;
+// no of unique values or ranges we can plot on map
+var _enumThreshhold = 10;
+// type of each column as stored in datavore
+var _colTypes = [];
+// color array
+var colorArray = [ "#F00", "#0F0", "#00F", "#FF0", "#F0F", "#0FF", "#ff78ff", "#ff7800", "#00FFF5", "#41005F" ];
 
 // upload the csv
 $("#filename").change(function(e) {
@@ -13,6 +21,9 @@ $("#filename").change(function(e) {
 		alert('Upload CSV');
 		return false;
 	}
+
+	var colUniqueValues = {"cols":{}, "types": {}};
+	var tableData = [];
 	    
 	if (e.target.files != undefined) {
 		var reader = new FileReader();
@@ -29,15 +40,57 @@ $("#filename").change(function(e) {
 					_.each(line.split(","), function(col, index){
 						var colClass = 'header-row btn-primary column column' + index;
 						row.append($('<th class=\"' + colClass + '\">' + col + '</th>'));
+						// get the header names
+						colUniqueValues["cols"][index] = {};
+						tableData[index] = [];
 					});
 				}else{
 					_.each(line.split(","), function(col, index){
 						var colClass = 'column column' + index;
 						row.append($('<td class=\"' + colClass +'\">' + col + '</td>'));
+						// get the uniques values in a column, as keys of associative array
+						if(!colUniqueValues["cols"][index][col]){
+							colUniqueValues["cols"][index][col] = {};
+							// check if the data type is integer
+							if (!colUniqueValues["types"][index] && ! (col == parseFloat(col)))
+								colUniqueValues["types"][index] = "string";
+						}
+						tableData[index].push(col);
 					});
 				}
 				table.append(row);	
 			});
+
+			// create datavore table
+			// create a table adding one column at a time
+			// _csvDataTable = dv.table();
+			var headerSplit = headerLine.split(",");
+			
+			_.each(colUniqueValues["cols"], function(col, colIndex){
+				var colName = headerSplit[colIndex];
+				var uniqueValues = Object.keys(colUniqueValues["cols"][colIndex]);
+				// floating values with range > _enumThreshhold
+				if(!colUniqueValues["types"][colIndex] && uniqueValues.length > _enumThreshhold)
+					_colTypes[colIndex] = "numeric";
+				// enums with unique values <= _enumThreshhold
+				else if(uniqueValues.length <= _enumThreshhold)
+					_colTypes[colIndex] = "ordinal";
+				// wont plot this data on the map
+				else
+					_colTypes[colIndex] = "nominal";
+			});
+			
+			// add the data to the table
+			_csvDataTable = dv.table(tableData.map(function(data, index){
+				if(_colTypes[index] == "numeric"){
+					var floatData = data.map(function(val, index){
+						return parseFloat(val)
+					});
+					return { name:headerSplit[index], type: _colTypes[index], values: floatData };
+				}
+				else
+					return { name:headerSplit[index], type: _colTypes[index], values: data };
+			}));
 
 			$("#csvimporthint").append(table);
 			// hide all the columns initially
@@ -239,10 +292,26 @@ function colSelectionChanged(e){
 	$(newColClass).show();
 }
 
+// function that returns the colors for the markers based on their values
+function getColor(feature, prop, increment, min, uniqueColorValues, colType){
+	var colorIndex = 0;
+	if(colType == "numeric"){
+		colorIndex = Math.floor((parseFloat(feature.properties[prop]) - min)/increment);
+		console.log(feature.properties[prop] + " " + colorIndex)
+	}else if(colType == "ordinal"){
+		var colorIndex = uniqueColorValues[feature.properties[prop]];
+	}
+	return colorArray[colorIndex];
+}
+
 // redraw layer based on column clicked
 function redrawLayer(columnClick){
-	var regexp = new RegExp('\\d');
+	var regexp = new RegExp('\\d+');
 	var columnVal = columnClick[0].match(regexp)[0];
+	// increment for coloring the markers
+	var increment = -1;
+	var min;
+	var uniqueColorValues;
 
 	var geojsonMarkerOptions = {
 	    radius: 8,
@@ -253,26 +322,41 @@ function redrawLayer(columnClick){
 	    fillOpacity: 0.8
 	};
 
+	if(_colTypes[columnVal] == "numeric"){
+		min = _csvDataTable.query({vals:[dv.min(columnVal)]})[0][0];
+		var max = _csvDataTable.query({vals:[dv.max(columnVal)]})[0][0];
+
+		increment = (parseFloat(max)-parseFloat(min) + 1)/10;
+	}else if(_colTypes[columnVal] == "ordinal"){
+		var uniqueValues = _csvDataTable.query({dims:[columnVal], vals:[dv.count()]});
+		uniqueColorValues = {};
+		_.each(uniqueValues[0], function(data, index){
+			uniqueColorValues[data] = index;
+		});
+	}
+	// _csvDataTable.query({dims:[3], vals:[dv.count()]})
 	var pointToLayerFunction = function (feature, latlng) {
-											var localGeojsonMarkerOptions = {};
-											localGeojsonMarkerOptions = $.extend(localGeojsonMarkerOptions, geojsonMarkerOptions);
-											var index = 0;
-											for(var prop in feature.properties){
-												if(index == columnVal){
-													if(feature.properties[prop] == "PRIVATE")
-														localGeojsonMarkerOptions.fillColor = "#ff7800";
-													break;
-												}
-												index++;
-											}
-												
-											var marker =  L.circleMarker(latlng, localGeojsonMarkerOptions);
-											var popup = marker.bindPopup("<b>" + feature.properties["prop-3"] + "</b>");
-											marker.on('click', function(e){
-												popup.openPopup();
-											});
-											return marker;
-										}
+		var localGeojsonMarkerOptions = {};
+		localGeojsonMarkerOptions = $.extend(localGeojsonMarkerOptions, geojsonMarkerOptions);
+		var index = 0;
+		for(var prop in feature.properties){
+			if(index == columnVal){
+				var color = getColor(feature, prop, increment, min, uniqueColorValues, _colTypes[columnVal]);
+				localGeojsonMarkerOptions.fillColor = color;
+				// if(feature.properties[prop] == "PRIVATE")
+				// 	localGeojsonMarkerOptions.fillColor = "#ff7800";
+				break;
+			}
+			index++;
+		}
+			
+		var marker =  L.circleMarker(latlng, localGeojsonMarkerOptions);
+		var popup = marker.bindPopup("<b>" + feature.properties["prop-0"] + "</b>");
+		marker.on('click', function(e){
+			popup.openPopup();
+		});
+		return marker;
+	}
 	// Remove the previous layer from the map
     _map.removeLayer(_mi_layer_geocsv);
 	drawMapFromCsv(pointToLayerFunction);
@@ -287,7 +371,7 @@ function colSelectionReset(e){
 function columnClicked(e){
 	var columnClass = $(this).attr("class");
 	// matches column followed by a digit
-	var columnClick = columnClass.match(/column\d/);
+	var columnClick = columnClass.match(/column\d+/);
 	redrawLayer(columnClick);
 }
 
@@ -389,4 +473,8 @@ function geoCSV(csv, geoFieldIndex, separator){
 	drawMapFromCsv();
 }
 
-
+// handler for the ready event
+$(function() {
+  // Handler for .ready() called.
+  initmap();
+});
