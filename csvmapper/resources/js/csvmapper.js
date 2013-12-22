@@ -10,7 +10,9 @@ var _enumThreshhold = 10;
 // type of each column as stored in datavore
 var _colTypes = [];
 // color array
-var colorArray = [ "#F00", "#0F0", "#00F", "#FF0", "#F0F", "#0FF", "#ff78ff", "#ff7800", "#00FFF5", "#41005F" ];
+var colorArray = [ "#F00", "#0F0", "#00F", "#FF0", "#F0F", "#0FF", "#ff78ff", "#ff7800", "#1E833E", "#41005F" ];
+// map legend
+var _legend;
 
 // upload the csv
 $("#filename").change(function(e) {
@@ -297,7 +299,6 @@ function getColor(feature, prop, increment, min, uniqueColorValues, colType){
 	var colorIndex = 0;
 	if(colType == "numeric"){
 		colorIndex = Math.floor((parseFloat(feature.properties[prop]) - min)/increment);
-		console.log(feature.properties[prop] + " " + colorIndex)
 	}else if(colType == "ordinal"){
 		var colorIndex = uniqueColorValues[feature.properties[prop]];
 	}
@@ -312,6 +313,7 @@ function redrawLayer(columnClick){
 	var increment = -1;
 	var min;
 	var uniqueColorValues;
+	var rangeArray = [];
 
 	var geojsonMarkerOptions = {
 	    radius: 8,
@@ -327,6 +329,10 @@ function redrawLayer(columnClick){
 		var max = _csvDataTable.query({vals:[dv.max(columnVal)]})[0][0];
 
 		increment = (parseFloat(max)-parseFloat(min) + 1)/10;
+
+		for(var i=min, count=0; i<=max; i+=increment, count++)
+			rangeArray[count] = Math.floor(i);
+
 	}else if(_colTypes[columnVal] == "ordinal"){
 		var uniqueValues = _csvDataTable.query({dims:[columnVal], vals:[dv.count()]});
 		uniqueColorValues = {};
@@ -343,8 +349,6 @@ function redrawLayer(columnClick){
 			if(index == columnVal){
 				var color = getColor(feature, prop, increment, min, uniqueColorValues, _colTypes[columnVal]);
 				localGeojsonMarkerOptions.fillColor = color;
-				// if(feature.properties[prop] == "PRIVATE")
-				// 	localGeojsonMarkerOptions.fillColor = "#ff7800";
 				break;
 			}
 			index++;
@@ -357,9 +361,29 @@ function redrawLayer(columnClick){
 		});
 		return marker;
 	}
+	// remove the previous legend
+	if(_legend)
+		_legend.removeFrom(_map);
+	// add the legend
+    _legend = L.control({position: 'bottomright'});
+	_legend.onAdd = function (map) {
+	    var div = L.DomUtil.create('div', 'info legend'),
+	        grades = rangeArray,
+	        labels = [];
+
+	    // loop through our density intervals and generate a label with a colored square for each interval
+	    for (var i = 0; i < grades.length; i++) {
+	    	var colorIndex = Math.floor((parseFloat(grades[i] + 1) - min)/increment);
+	        div.innerHTML +=
+	            '<i style="background:' + colorArray[colorIndex] + '"></i> ' +
+	            grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+	    }
+	    return div;
+	};
+
 	// Remove the previous layer from the map
     _map.removeLayer(_mi_layer_geocsv);
-	drawMapFromCsv(pointToLayerFunction);
+	drawMapFromCsv(pointToLayerFunction, _legend);
 }
 
 // function that handles clearing the column
@@ -400,7 +424,7 @@ function columnPicker(line){
 }
 
 // draw the map, expect this function to be called repeatedly to draw
-function drawMapFromCsv(pointToLayerFunction){
+function drawMapFromCsv(pointToLayerFunction, legend){
 	if(!pointToLayerFunction){
 		var geojsonMarkerOptions = {
 		    radius: 8,
@@ -429,6 +453,10 @@ function drawMapFromCsv(pointToLayerFunction){
 	_mi_layer_geocsv.addData(_refinedCsv);
 	
     _map.addLayer(_mi_layer_geocsv);
+
+    // add a legend if needed
+    if(legend)
+    	legend.addTo(_map);
     //point map to the correct location
     _map.fitBounds(_mi_layer_geocsv.getBounds());
 }
