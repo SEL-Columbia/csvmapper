@@ -309,10 +309,11 @@ function getColor(feature, prop, increment, min, uniqueColorValues, colType){
 function redrawLayer(columnClick){
 	var regexp = new RegExp('\\d+');
 	var columnVal = columnClick[0].match(regexp)[0];
+	var columnName = $("th." + columnClick[0]).text();
 	// increment for coloring the markers
-	var increment = -1;
-	var min;
+	var increment = -1, min;
 	var uniqueColorValues;
+	// used to make the legend
 	var rangeArray = [];
 
 	var geojsonMarkerOptions = {
@@ -325,6 +326,7 @@ function redrawLayer(columnClick){
 	};
 
 	if(_colTypes[columnVal] == "numeric"){
+		// get data from the datavore table
 		min = _csvDataTable.query({vals:[dv.min(columnVal)]})[0][0];
 		var max = _csvDataTable.query({vals:[dv.max(columnVal)]})[0][0];
 
@@ -339,6 +341,10 @@ function redrawLayer(columnClick){
 		_.each(uniqueValues[0], function(data, index){
 			uniqueColorValues[data] = index;
 		});
+		rangeArray = uniqueValues[0];
+	}else{
+		alert('Unclean data, cannot plot');
+		return;
 	}
 	// _csvDataTable.query({dims:[3], vals:[dv.count()]})
 	var pointToLayerFunction = function (feature, latlng) {
@@ -370,13 +376,19 @@ function redrawLayer(columnClick){
 	    var div = L.DomUtil.create('div', 'info legend'),
 	        grades = rangeArray,
 	        labels = [];
-
+	    div.innerHTML += columnName + "<br>";
 	    // loop through our density intervals and generate a label with a colored square for each interval
 	    for (var i = 0; i < grades.length; i++) {
 	    	var colorIndex = Math.floor((parseFloat(grades[i] + 1) - min)/increment);
-	        div.innerHTML +=
-	            '<i style="background:' + colorArray[colorIndex] + '"></i> ' +
-	            grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+	    	if(_colTypes[columnVal] == "numeric"){
+		        div.innerHTML +=
+		            '<i style="background:' + colorArray[colorIndex] + '"></i> ' +
+		            grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+	        }else{
+	        	div.innerHTML +=
+		            '<i style="background:' + colorArray[i] + '"></i> ' +
+		            grades[i] + '<br>';
+	        }
 	    }
 	    return div;
 	};
