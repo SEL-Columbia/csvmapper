@@ -39,7 +39,7 @@ $("#filename").change(function(e) {
 
 				if(index == 0){
 					headerLine = line;
-					_.each(line.split(","), function(col, index){
+					_.each(line.match(/(?:"[^"]*"|[^,])+/g), function(col, index){
 						var colClass = 'header-row btn-primary column column' + index;
 						row.append($('<th class=\"' + colClass + '\">' + col + '</th>'));
 						// get the header names
@@ -47,7 +47,7 @@ $("#filename").change(function(e) {
 						tableData[index] = [];
 					});
 				}else{
-					_.each(line.split(","), function(col, index){
+					_.each(line.match(/(?:"[^"]*"|[^,])+/g), function(col, index){
 						var colClass = 'column column' + index;
 						row.append($('<td class=\"' + colClass +'\">' + col + '</td>'));
 						// get the uniques values in a column, as keys of associative array
