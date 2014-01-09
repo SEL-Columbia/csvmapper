@@ -36,7 +36,7 @@
 	 	<input type="file" name="filename" id="filename"/>
 
 	 	<!-- Button trigger modal -->
-		<a data-toggle="modal" href="#fieldModal" class="btn btn-primary btn-lg">Refine CSV</a>
+		<a data-toggle="modal" href="#fieldModal" id="refineCsvId" class="btn btn-primary btn-lg" style="display:none">Refine CSV</a>
 
 	 	<!--the csv table -->
 
@@ -54,9 +54,9 @@
 	    <div id="latlngSeparatorDiv" class="input-append">
 	    	<label class="control-label">Enter the separator</label>
 	    	<input type="text" placeholder="Comma if your csv has Lat,Lng" id="latlngSeparatorId" class="span4"></input>
-	    	<span class="add-on">,</span>
-	    	<span class="add-on">[SPACE]</span>
-	    	<span class="add-on">@</span>
+	    	<span class="btn insertComma">,</span>
+	    	<span class="btn insertSpace">[SPACE]</span>
+	    	<span class="btn insertAt">@</span>
 	    	<hr>
 	    </div>
 
@@ -117,7 +117,7 @@
 		<a id="resetColumnSelectionId" class="btn btn-primary btn-lg">Reset</a>
     </script>
 
-	<!-- Modal -->
+	<!-- Modal to refine the uploaded CSV -->
 	<div class="modal fade" id="fieldModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
 	    <div class="modal-dialog">
 	      <div class="modal-content">
@@ -147,6 +147,24 @@
 		          <button id="saveLatLng" type="button" class="btn btn-primary">Save changes</button>
 		        </div>
 
+	      </div><!-- /.modal-content -->
+	    </div><!-- /.modal-dialog -->
+	</div><!-- /.modal -->
+
+	<!-- Modal to show the progress bar while uploading -->
+	<div class="modal fade" id="progressModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+	    <div class="modal-dialog">
+	      <div class="modal-content">
+
+		        <div class="modal-header">
+		          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+		          <h4 class="modal-title">Uploading...</h4>
+		        </div>
+		        <div class="modal-body">
+		        	<div class="progress">
+					  <div class="bar bar-success" style="width: 0%;"></div>
+					</div>
+		        </div>
 	      </div><!-- /.modal-content -->
 	    </div><!-- /.modal-dialog -->
 	</div><!-- /.modal -->

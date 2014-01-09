@@ -30,12 +30,24 @@ $("#filename").change(function(e) {
 	if (e.target.files != undefined) {
 		var reader = new FileReader();
 		reader.onload = function(e) {
+			// show the progress bar modal
+			$("#progressModal").modal('show');
+
 			var csvLines = e.target.result.split(/[\r\n|\n]+/);
+			var totalRows = csvLines.length;
 			var headerLine = "";
 
 			var table = $('<table></table>').addClass('csv-table table table-hover table-bordered');
 			_.each(csvLines, function(line, index){
+				// update the progress
+				var percent = Math.round((index*100) / totalRows);
+				$("#progressModal .progress .bar").attr("style", "width: " + percent + "%;")
+
+
 				var row = $('<tr></tr>');
+
+				if(index%500 == 0)
+					console.log("index " + index);
 
 				if(index == 0){
 					headerLine = line;
@@ -94,10 +106,16 @@ $("#filename").change(function(e) {
 					return { name:headerSplit[index], type: _colTypes[index], values: data };
 			}));
 
+			// hide the progress bar modal
+			$("#progressModal").modal('hide');
+
 			$("#csvimporthint").append(table);
 			// hide all the columns initially
 			$(".column").hide();
 			$("#csvimporthinttitle").show();
+
+			// show the refine CSV button
+			$("#refineCsvId").show();
 
 			// save to global object
 			readCSV = e.target.result;
@@ -269,8 +287,48 @@ function getLatLngField(line){
 
 	// bind the save click
 	$("#saveLatLng").on("click", {line: line}, modalSaveClick);
+
+	// bind the input button clicks
+	$(".insertComma").on("click", function(){
+		$("#latlngSeparatorId").val(",")
+	});
+	$(".insertSpace").on("click", function(){
+		$("#latlngSeparatorId").val(" ")
+	});
+	$(".insertAt").on("click", function(){
+		$("#latlngSeparatorId").val("@")
+	});
 }
 
+
+// function colSelectionChanged(e){
+// 	// column from the csv
+// 	var chosenColumn = $(this).val();
+// 	var newColClass = "th.column"+ chosenColumn + ", td.column" + chosenColumn;
+
+// 	// which place to put this column into
+// 	var columnChosenFor = $(this).attr("index");
+// 	var earlierColClass = "th:visible:eq(" + columnChosenFor + "),td:visible:eq(" + columnChosenFor + ")";
+
+// 	// column to replaced, when no column is displayed in that position
+// 	var noColClass = "th:hidden:eq(" + columnChosenFor + "),td:hidden:eq(" + columnChosenFor + ")";
+
+// 	$('.csv-table tr').each(function() {
+// 	    var tr = $(this);
+// 	    var td1 = tr.find(newColClass);
+// 	    var td2 = tr.find(earlierColClass);
+// 	    if (td2.length != 0){
+// 		    td2.hide();
+// 		    td1.detach().insertAfter(td2);
+// 		    //td1.detach().insertBefore(td2);
+// 		}else{
+// 			td2 = tr.find(noColClass);
+// 			td2.hide();
+// 		    td1.detach().insertBefore(td2);
+// 		}
+// 	});
+// 	$(newColClass).show();
+// }
 // function that handles the change of col selection
 function colSelectionChanged(e){
 	// column from the csv
@@ -279,7 +337,10 @@ function colSelectionChanged(e){
 
 	// which place to put this column into
 	var columnChosenFor = $(this).attr("index");
-	var earlierColClass = "th:visible:eq(" + columnChosenFor + "),td:visible:eq(" + columnChosenFor + ")";
+	var earlierColClass = "th.columnVisible" + columnChosenFor + ", td.columnVisible" + columnChosenFor;
+
+	// column to replaced, when no column is displayed in that position
+	var noColClass = "th:hidden:eq(" + columnChosenFor + "),td:hidden:eq(" + columnChosenFor + ")";
 
 	$('.csv-table tr').each(function() {
 	    var tr = $(this);
@@ -288,8 +349,21 @@ function colSelectionChanged(e){
 	    if (td2.length != 0){
 		    td2.hide();
 		    td1.detach().insertAfter(td2);
+		    td2.removeClass("columnVisible" + columnChosenFor)
 		    //td1.detach().insertBefore(td2);
+		}else{
+			td2 = tr.find(noColClass);
+			// don't detach yourself, i.e. td1 == td2
+			if(!td2.hasClass("column" + chosenColumn))
+		    	td1.detach().insertBefore(td2);
 		}
+		// prevent assigning two visible classes to the same column
+		var regex = new RegExp('columnVisible\\d+');
+		var matchColumnVisible = td1.prop('className').match(regex);
+		if(matchColumnVisible)
+			td1.removeClass(matchColumnVisible[0]);
+		// add the new columnVisible class
+		td1.addClass("columnVisible" + columnChosenFor);
 	});
 	$(newColClass).show();
 }
@@ -361,7 +435,7 @@ function redrawLayer(columnClick){
 		}
 			
 		var marker =  L.circleMarker(latlng, localGeojsonMarkerOptions);
-		var popup = marker.bindPopup("<b>" + feature.properties["prop-0"] + "</b>");
+		var popup = marker.bindPopup("<b>" + feature.properties["prop-" + columnVal] + "</b>");
 		marker.on('click', function(e){
 			popup.openPopup();
 		});
